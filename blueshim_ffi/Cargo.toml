@@ -1,0 +1,14 @@
+[package]
+name = "blueshim_ffi"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "blueshim"
+crate-type = ["staticlib", "cdylib"]
+
+[dependencies]
+blueshim = { version = "0.1.0", path = ".." }
+
+#[build-dependencies]
+#cbindgen = "0.26.0"
