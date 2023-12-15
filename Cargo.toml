@@ -7,15 +7,22 @@ edition = "2021"
 
 [dependencies]
 base64 = "0.21.5"
+http = "1.0.0"
 log = "0.4.20"
+pem-rfc7468 = "0.7.0"
 plist = "1.6.0"
-rsa = { version = "0.9.6", features = ["hazmat"] }
+rand_core = { version = "0.6.4", features = ["alloc", "std"] }
+rsa = { version = "0.9.6", features = ["sha2", "sha1"] }
 rustls = "0.22.1"
 rustls-pemfile = "2.0.0"
 serde = { version = "1.0.193", features = ["derive"] }
+signature = { version = "2.2.0", features = ["digest", "derive"] }
+tokio = { version = "1.35.0", features = ["rt-multi-thread", "macros", "net"] }
+tokio-rustls = "0.25.0"
+ureq = { version = "2.9.1", features = ["gzip", "tls", "http-interop", "http-crate", "json"] }
 #unicorn-engine = "2.0.1"
 uuid = { version = "1.6.1", features = ["v4", "serde"] }
-x509-cert = { version = "0.2.4", features = ["builder", "hazmat"] }
+x509-cert = { version = "0.2.4", features = ["builder", "sha1"] }
 
 [workspace]
 members = ["blueshim_ffi"]
