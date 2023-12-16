@@ -2,7 +2,7 @@
 //! Bags contain configuration information required to interact with APNS.
 //!
 
-use base64::prelude::{BASE64_STANDARD, Engine};
+use base64::prelude::{Engine, BASE64_STANDARD};
 
 #[derive(Deserialize)]
 pub struct Bag {
@@ -59,7 +59,10 @@ pub fn apns_bag() -> Bag {
 }
 
 pub fn ids_bag() -> Bag {
-    get_bag("https://init.ess.apple.com/WebObjects/VCInit.woa/wa/getBag?ix=3", None)
+    get_bag(
+        "https://init.ess.apple.com/WebObjects/VCInit.woa/wa/getBag?ix=3",
+        None,
+    )
 }
 
 pub fn gsa_bag() -> Bag {

@@ -3,13 +3,21 @@
 //!
 
 pub mod bags;
-use std::{net::SocketAddr, str::FromStr, sync::Arc, io::Write};
+pub mod messages;
+
+use std::{error::Error, io::Write, net::SocketAddr, str::FromStr, sync::Arc};
 
 use bags::apns_bag;
 use rand_core::{OsRng, RngCore};
-use rustls::{ClientConfig, RootCertStore, pki_types::{ServerName, DnsName}};
-use tokio::{net::TcpStream, io::AsyncWrite};
-use tokio_rustls::{TlsConnector, client::TlsStream, TlsStream};
+use rustls::{
+    pki_types::{DnsName, ServerName},
+    ClientConfig, RootCertStore,
+};
+use tokio::{
+    io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader, BufStream},
+    net::TcpStream,
+};
+use tokio_rustls::{client::TlsStream, TlsConnector};
 
 /// The port Apple's courier server listens on
 ///
@@ -28,35 +36,66 @@ fn random_courier_host() -> String {
 
     format!(
         "{host_num}-{host_base}",
-        host_num = (num % hosts)+1,
+        host_num = (num % hosts) + 1,
         host_base = bag.courier_hostname,
     )
 }
 
 pub struct Conn {
-    conn: TlsStream<TcpStream>,
+    conn: BufStream<TlsStream<TcpStream>>,
 }
 impl Conn {
-    pub async fn init() {
+    /// Initialize connection to APNS
+    pub async fn init() -> Self {
         let host = random_courier_host();
 
         println!("Connecting to {host}...");
 
-        let mut strm = TcpStream::connect(SocketAddr::from_str(&format!("{host}:{COURIER_PORT}")).unwrap()).await.unwrap();
+        match TcpStream::connect(SocketAddr::from_str(&format!("{host}:{COURIER_PORT}")).unwrap())
+            .await
+        {
+            Ok(strm) => {
+                let mut certs = RootCertStore::empty();
+                let tls_cfg = ClientConfig::builder()
+                    .with_root_certificates(certs)
+                    .with_no_client_auth();
+                let tlsc = TlsConnector::from(Arc::new(tls_cfg));
+                let tls_strm = tlsc
+                    .connect(ServerName::DnsName(DnsName::try_from(host).unwrap()), strm)
+                    .await
+                    .unwrap();
 
-        let mut certs = RootCertStore::empty();
-        let tls_cfg = ClientConfig::builder().with_root_certificates(certs).with_no_client_auth();
-        let tlsc = TlsConnector::from(Arc::new(tls_cfg));
-        let mut tls_strm = tlsc.connect(ServerName::DnsName(DnsName::try_from(host).unwrap()), strm).await.unwrap();
-        let (io, conn) = tls_strm.get_mut();
+                Self {
+                    conn: BufStream::new(tls_strm),
+                }
+            }
+            Err(_) => panic!(),
+        }
     }
-    pub async fn write_payload(&mut self, id: u8, payload: &[u8]) {
-        let mut buf = Vec::new();
+    /// Read a message from APNS
+    ///
+    /// **APNS message =/= iMessage message**
+    pub async fn read_message(&mut self) -> Result<(u8, Vec<u8>), Box<dyn Error>> {
+        let conn = &mut self.conn;
 
-        buf.write_all(&id.to_be_bytes()).unwrap();
-        buf.write_all(&(payload.len() as u32).to_be_bytes()).unwrap();
-        buf.write_all(payload).unwrap();
+        let id = conn.read_u8().await?;
+        let len = conn.read_u32().await?;
 
-        self.conn.get_mut().1.writer().write_all(&buf).unwrap();
+        let mut payload = Vec::with_capacity(len as usize);
+        conn.read_exact(&mut payload).await?;
+
+        Ok((id, payload))
+    }
+    /// Write a message to APNS
+    ///
+    /// **APNS message =/= iMessage message**
+    pub async fn write_message(&mut self, id: u8, payload: &[u8]) -> Result<(), Box<dyn Error>> {
+        let conn = &mut self.conn;
+
+        conn.write_u8(id).await?;
+        conn.write_u32(payload.len() as u32).await?;
+        conn.write_all(payload).await?;
+
+        Ok(())
     }
 }
