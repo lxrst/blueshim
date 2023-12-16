@@ -24,7 +24,7 @@ This implementation is NOT secure, but the iMessage protocol isn't either. As is
 
 iMessage is a proprietary messaging protocol and service used by Apple.
 
-Apple's [somewhat malicious]() [refusal]() to open it up in any way, as well as their [bullying strategy]() has ticked people off.
+Apple's [greed](https://www.macrumors.com/2021/04/09/epic-apple-no-imessage-on-android/) and [refusal](https://www.theverge.com/2022/9/8/23343336/apple-tim-cook-imessage-blue-green-bubbles-texting-rcs) to open it up in any way, has ticked people off.
 
 [pypush]() is a reverse engineering effort, but it's not something people are meant to use.
 
